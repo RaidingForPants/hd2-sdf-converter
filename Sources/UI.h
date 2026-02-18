@@ -37,4 +37,6 @@ namespace ui
     float Zoom( int& _zoom, int min, int max );
 
     void SaveImage( const std::string& _dataPath, char _prefix[100], SDF& _sdf );
+	
+	void SaveImage2( const std::string& _dataPath, char _prefix[100], sf::Sprite& s );
 }

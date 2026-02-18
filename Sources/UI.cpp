@@ -17,6 +17,7 @@ namespace ui
         " DOI: https://doi.org/10.1145/1281500.1281665";
     static constexpr char paperRefShort[] = "Chris Green Improved alpha-tested magnification for vector textures and special effects";
 
+	static int resize_real = 2;
 
     void LoadImage( char _fileName[100], SDF& _sdf )
     {
@@ -40,8 +41,9 @@ namespace ui
     void SpreadResize( int& _spread, int& _resize )
     {
         ImGui::Text( "Signed Distance Field" );
-        ImGui::SliderInt( "Spread", &_spread, 1, 50 );
-        ImGui::SliderInt( "Resize Factor", &_resize, 1, 30 );
+        ImGui::SliderInt( "Spread", &_spread, 1, 100 );
+        ImGui::SliderInt( "Resize Factor", &resize_real, 1, 10 );
+		_resize = 1 << resize_real;
     }
 
     void SmoothOutlineGlow( SDF& _sdf )
@@ -155,6 +157,28 @@ namespace ui
             imageToSave = _sdf.GetAlphaSprite().getTexture()->copyToImage();
             imageToSave.saveToFile( _dataPath + "Saved/" + _prefix + "_AlphaTested.png" );
         }
+
+        ImGui::End();
+    }
+	
+	void SaveImage2( const std::string& _dataPath, char _prefix[100], sf::Sprite& s )
+    {
+        ImGui::Begin( "Save to file" );
+
+        ImGui::Text( "File prefix : " );
+        ImGui::SameLine();
+        ImGui::InputText( "", _prefix, 99 );
+        if( ImGui::Button( "Save" ) )
+        {
+            sf::Image imageToSave = s.getTexture()->copyToImage();
+            imageToSave.saveToFile( _dataPath + "Saved/" + _prefix + "_output.png" );
+        }
+		ImGui::SameLine();
+		if( ImGui::Button( "Open Folder" ) )
+		{
+			std::string command = "explorer.exe .\\Data\\Saved";
+			system(command.c_str());
+		}
 
         ImGui::End();
     }

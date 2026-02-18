@@ -4,8 +4,8 @@
 
 SDF::SDF() :
     m_sourceSprite( m_sourceTexture ),
-    spread( 20 ),
-    resizeFactor( 3 ),
+    spread( 50 ),
+    resizeFactor( 2 ),
     imageType( ImageType::RGBA ),
     smoothing( 64.0f ),
     outline( false ),
@@ -46,6 +46,18 @@ void SDF::SetTexture( const std::string& fileName )
 {
     m_sourceTexture.loadFromFile( fileName );
     m_sourceTexture.setSmooth( true );
+
+    m_sourceSize = m_sourceTexture.getSize();
+    
+    m_sourceSprite.setTexture( m_sourceTexture, true );
+
+    ResetFBOsToSourceTexture();
+}
+
+void SDF::SetTexture( const sf::Image& image )
+{
+	m_sourceTexture.loadFromImage(image);
+	m_sourceTexture.setSmooth( true );
 
     m_sourceSize = m_sourceTexture.getSize();
     
@@ -126,6 +138,33 @@ void SDF::ProcessResize()
     m_resizeSprite.setTexture( m_resizeTexture, true );   
 
     m_sdfSprite.setScale( 1.0f, 1.0f );
+}
+
+void SDF::ResizeImage(sf::Image& im)
+{
+	m_resizeShader.setUniform( "sourceTexture", sf::Shader::CurrentTexture );
+	sf::Sprite s;
+	sf::Texture t;
+	t.loadFromImage(im);
+	s.setTexture(t);
+
+    const float scale = 1.0f / static_cast<float>( resizeFactor );
+    s.setScale( scale, scale );
+
+    sf::Vector2u newSize;
+    GetScaledSpriteSize( newSize, s );
+
+    m_resizeFBO.create( newSize.x, newSize.y );
+    m_resizeFBO.clear( sf::Color::Transparent );
+    m_resizeFBO.draw( s, m_resizeRenderStates );
+    m_resizeFBO.display();
+
+    sf::Texture resizedTexture = m_resizeFBO.getTexture();
+    resizedTexture.setSmooth( true );
+	im = resizedTexture.copyToImage();
+    //m_resizeSprite.setTexture( resizedTexture, true );   
+
+    //s.setScale( 1.0f, 1.0f );
 }
 
 void SDF::ProcessAlphaTest( float finalScale, const sf::Color& clearColor )

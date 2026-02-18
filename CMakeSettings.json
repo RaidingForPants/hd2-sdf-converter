@@ -12,6 +12,12 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
+	  "variables": [
+    {
+        "name": "SFML_ROOT",
+        "value": "${projectDir}\\..\\SFML-2.5.1"
+    }
+]
     },
     {
       "name": "x64-Debug",
@@ -25,6 +31,12 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
+	  "variables": [
+    {
+        "name": "SFML_ROOT",
+        "value": "${projectDir}\\..\\SFML-2.5.1"
+    }
+]
     },
     {
       "name": "x86-Debug",
@@ -38,6 +50,12 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
+	  "variables": [
+    {
+        "name": "SFML_ROOT",
+        "value": "${projectDir}\\..\\SFML-2.5.1"
+    }
+]
     },
     {
       "name": "x86-Release",
@@ -51,6 +69,12 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
+	  "variables": [
+    {
+        "name": "SFML_ROOT",
+        "value": "${projectDir}\\..\\SFML-2.5.1"
+    }
+]
     }
   ]
 }

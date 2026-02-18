@@ -9,13 +9,10 @@
 
 #include <string>
 #include <functional>
+#include <cstdio>
 
 
-#ifdef _MSC_VER
-static const std::string DATA_PATH = "../../Data/";
-#else
-static const std::string DATA_PATH = "../Data/";
-#endif
+static const std::string DATA_PATH = "./Data/";
 
 //#define HIGH_DPI
 #ifdef HIGH_DPI
@@ -47,25 +44,108 @@ void ShowSourceImage( int& _zoom, SDF& _sdf )
     ImGui::End();
 }
 
-void ShowProcessedImage( int& _zoom, bool& _apply, int _viewMode, SDF& _sdf )
+sf::Image convertChannelToGrayscale(const sf::Image& inputImage, int channel) {
+	sf::Image outputImage;
+    sf::Vector2u size = inputImage.getSize();
+	
+	outputImage.create(size.x, size.y, sf::Color(0, 0, 0, 255));
+
+    for (unsigned int y = 0; y < size.y; ++y) {
+        for (unsigned int x = 0; x < size.x; ++x) {
+            sf::Color pixel = inputImage.getPixel(x, y);
+			sf::Uint8 gray;
+			switch(channel) {
+				case 0:
+					gray = pixel.r;
+					break;
+				case 1:
+					gray = pixel.g;
+					break;
+				case 2:
+					gray = pixel.b;
+					break;
+				case 3:
+					gray = pixel.a;
+					break;
+			}
+            outputImage.setPixel(x, y, sf::Color(gray, gray, gray, 255));
+        }
+    }
+    return outputImage;
+}
+
+sf::Image combineChannels(const sf::Image& im_r, const sf::Image& im_g, const sf::Image& im_b, const sf::Image& im_a ) {
+	sf::Image outputImage;
+    sf::Vector2u size = im_r.getSize();
+	
+	outputImage.create(size.x, size.y, sf::Color(0, 0, 0, 255));
+
+    for (unsigned int y = 0; y < size.y; ++y) {
+        for (unsigned int x = 0; x < size.x; ++x) {
+            outputImage.setPixel(x, y, sf::Color(im_r.getPixel(x, y).r, im_g.getPixel(x, y).r, im_b.getPixel(x, y).r, im_a.getPixel(x, y).r));
+        }
+    }
+    return outputImage;
+}
+
+void ProcessImage(bool& _apply, SDF& _sdf, sf::Image& im)
+{
+	sf::Image orig_image;
+	sf::Image combined;
+    if( _apply )
+    {
+		orig_image = _sdf.GetSourceSprite().getTexture()->copyToImage();
+		_sdf.imageType = ImageType::Grey;
+		
+		//_sdf.Process();
+		//_apply = false;
+		
+		//red
+		sf::Image im_r = convertChannelToGrayscale(orig_image, 0);
+		_sdf.SetTexture(im_r);
+        _sdf.Process();
+		im_r = _sdf.GetSDFSprite().getTexture()->copyToImage();
+		
+		//green
+		sf::Image im_g = convertChannelToGrayscale(orig_image, 1);
+		_sdf.SetTexture(im_g);
+        _sdf.Process();
+		im_g = _sdf.GetSDFSprite().getTexture()->copyToImage();
+		
+		//blue
+		sf::Image im_b = convertChannelToGrayscale(orig_image, 2);
+		_sdf.SetTexture(im_b);
+        _sdf.Process();
+		im_b = _sdf.GetSDFSprite().getTexture()->copyToImage();
+		
+		//alpha
+		sf::Image im_a = convertChannelToGrayscale(orig_image, 3);
+		_sdf.SetTexture(im_a);
+        _sdf.Process();
+		im_a = _sdf.GetSDFSprite().getTexture()->copyToImage();
+		
+		combined = combineChannels(im_r, im_g, im_b, im_a);
+		
+		_sdf.SetTexture(orig_image);
+		im = combined;
+		
+    }
+}
+
+void ShowProcessedImage( int& _zoom, bool& _apply, int _viewMode, SDF& _sdf, sf::Image& image )
 {
     ImGui::Begin( "Processed Picture" );
 
     const float scale = ui::Zoom( _zoom, 10, 4000 );
 
-    // Process the signed distance field, resize it then render the final result.
-    if( _apply )
-    {
-        _sdf.Process();
-        _apply = false;
-    }
-
     // Process the final render with the last processed signed distance field resized.
     // The scale will be applied while rendering to apply smooth.
-    _sdf.ProcessAlphaTest( scale );
+    _sdf.ProcessAlphaTest( scale );//REMOVE
 
     // Retrieve the sprite that the user want to see.
     // If it is not the alpha tested result, we have to apply the scale.
+	
+	// REMOVE THIS SECTION --------------------
     std::reference_wrapper<sf::Sprite> processedSprite = std::ref( _sdf.GetAlphaSprite() );
     if( _viewMode == ui::ViewMode::NoResize )
     {
@@ -78,9 +158,19 @@ void ShowProcessedImage( int& _zoom, bool& _apply, int _viewMode, SDF& _sdf )
         processedSprite = std::ref( _sdf.GetResizeSprite() );
         processedSprite.get().setScale( scale, scale );
     }
+	// ----------------------------------
+	if (_apply) {
+		_sdf.ResizeImage(image);
+		_apply = false;
+	}
+	sf::Texture t;
+	t.loadFromImage(image);
+	sf::Sprite s;
+	s.setTexture(t, true);
+	s.setScale(scale, scale);
 
-    ui::Image( processedSprite.get() );
-
+    ui::Image( s );
+	
     // Resture default scale.
     processedSprite.get().setScale( 1.0f, 1.0f );
 
@@ -88,8 +178,37 @@ void ShowProcessedImage( int& _zoom, bool& _apply, int _viewMode, SDF& _sdf )
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
+	if (argc > 1) {
+		/*
+		usage:
+		need input filepath, output filepath, spread, resize factor
+		*/
+		
+		// get args
+		std::string inFile(argv[1]);
+		std::string outFile(argv[2]);
+		std::string spread_str(argv[3]);
+		std::string resizeFactor_str(argv[4]);
+		int spread = std::stoi(spread_str);
+		int resizeFactor = std::stoi(resizeFactor_str);
+		
+		// process SDF
+		SDF sdf;
+		sdf.Init(DATA_PATH);
+		sdf.SetTexture(inFile);
+		sdf.imageType = ImageType::Grey;
+		sdf.spread = spread; //from argument
+		sdf.resizeFactor = resizeFactor; //from argument
+		sdf.Process();
+		
+		// save output image
+		sf::Image imageToSave = sdf.GetResizeSprite().getTexture()->copyToImage();
+		imageToSave.saveToFile(outFile);
+		return 0;
+	}
+	
     sf::RenderWindow window( sf::VideoMode( WINDOW_SIZE_X, WINDOW_SIZE_Y ),
                              "Improved Alpha-Tested Magnfication for Vector Textures and Special Effects" );
     window.setFramerateLimit( 60 );
@@ -111,6 +230,7 @@ int main()
     int viewMode = ui::ViewMode::AlphaTested;
     int zoomOriginal = 100;
     int zoomProcessed = 100;
+	sf::Image im;
     bool autoApply = false;
     bool apply = true; // True to process when oppening the app.
 
@@ -135,12 +255,18 @@ int main()
         ImGui::Begin( "Settings" );
 
         ui::LoadImage( fileNameToLoad, sdf ); ImGui::Separator();
-        ui::ImageType( sdf.imageType ); ImGui::Separator();
+        //ui::ImageType( sdf.imageType ); ImGui::Separator();
         ui::SpreadResize( sdf.spread, sdf.resizeFactor ); 
+		sf::Vector2u imageSize = sdf.GetSourceSprite().getTexture()->getSize();
+		
+		char buf[100];
+		sprintf_s(buf, 100, "(%dx%d) -> (%dx%d)", imageSize.x, imageSize.y, imageSize.x/sdf.resizeFactor, imageSize.y/sdf.resizeFactor);
+		
+		ImGui::Text(buf);
         ui::Apply( apply, autoApply ); ImGui::Separator();
-        ui::SmoothOutlineGlow( sdf ); ImGui::Separator();
-        ui::ViewMode( viewMode ); ImGui::Separator();
-        ui::PaperRef(); ImGui::Separator();
+        //ui::SmoothOutlineGlow( sdf ); ImGui::Separator();
+        //ui::ViewMode( viewMode ); ImGui::Separator();
+        //ui::PaperRef(); ImGui::Separator();
 
         ImGui::End();
 
@@ -149,14 +275,19 @@ int main()
         /********************************************************/
 
         ShowSourceImage( zoomOriginal, sdf );
+		
+		ProcessImage(apply, sdf, im);
 
-        ShowProcessedImage( zoomProcessed, apply, viewMode, sdf );
+        ShowProcessedImage( zoomProcessed, apply, viewMode, sdf, im);
 
         /********************************************************/
         /***          Save to PNG functionnality              ***/
         /********************************************************/
-
-        ui::SaveImage( DATA_PATH, fileNameToSave, sdf );
+		sf::Texture t;
+		t.loadFromImage(im);
+		sf::Sprite s;
+		s.setTexture(t, true);
+        ui::SaveImage2( DATA_PATH, fileNameToSave, s );
 
 
         window.clear();

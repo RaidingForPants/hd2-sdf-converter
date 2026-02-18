@@ -20,6 +20,7 @@ public:
     void Init( const std::string& dataPath );
 
     void SetTexture( const std::string& fileName );
+	void SetTexture( const sf::Image& image );
 
     void Process();
     void ProcessAlphaTest( float finalScale, const sf::Color& clearColor = sf::Color::Transparent );
@@ -29,6 +30,8 @@ public:
     sf::Sprite& GetSDFSprite();
     sf::Sprite& GetResizeSprite();
     sf::Sprite& GetAlphaSprite();
+	
+	void ResizeImage(sf::Image& im);
 
 private:
     void ProcessDistanceField();
