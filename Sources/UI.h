@@ -18,7 +18,7 @@ namespace ui
     };
 
 
-    void LoadImage( char _fileName[100], SDF& _sdf );
+    void LoadImage2( SDF& _sdf );
 
     void ImageType( int& _imageType );
 
@@ -38,5 +38,7 @@ namespace ui
 
     void SaveImage( const std::string& _dataPath, char _prefix[100], SDF& _sdf );
 	
-	void SaveImage2( const std::string& _dataPath, char _prefix[100], sf::Sprite& s );
+	void SaveImage2( sf::Sprite& s );
+	
+	void FileMenu( SDF& _sdf, sf::Sprite& s, bool& _apply );
 }

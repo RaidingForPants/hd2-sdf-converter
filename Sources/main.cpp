@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 	}
 	
     sf::RenderWindow window( sf::VideoMode( WINDOW_SIZE_X, WINDOW_SIZE_Y ),
-                             "Improved Alpha-Tested Magnfication for Vector Textures and Special Effects" );
+                             "SDF Processor For Helldivers 2" );
     window.setFramerateLimit( 60 );
 
     ImGui::SFML::Init( window );
@@ -223,9 +223,6 @@ int main(int argc, char* argv[])
     SDF sdf;
     sdf.Init( DATA_PATH );
     sdf.SetTexture( DATA_PATH + "Images/Circle1024.png" );
-
-    char fileNameToLoad[100] = "\0";
-    char fileNameToSave[100] = "\0";
 
     int viewMode = ui::ViewMode::AlphaTested;
     int zoomOriginal = 100;
@@ -244,6 +241,16 @@ int main(int argc, char* argv[])
 
             if( event.type == sf::Event::Closed )
                 window.close();
+			if( event.type == sf::Event::LostFocus ) // reset key down values to false
+			{
+				for(int i = 0; i < 512; i++){
+					ImGui::GetIO().KeysDown[i] = false;
+				}
+				ImGui::GetIO().KeyCtrl = false;
+				ImGui::GetIO().KeyShift = false;
+				ImGui::GetIO().KeyAlt = false;
+				ImGui::GetIO().KeySuper = false;
+			}
         }
 
         ImGui::SFML::Update( window, deltaClock.restart() );
@@ -252,10 +259,8 @@ int main(int argc, char* argv[])
         /***             Retrieve user settings               ***/
         /********************************************************/
 
-        ImGui::Begin( "Settings" );
+        ImGui::Begin( "SDF Settings" );
 
-        ui::LoadImage( fileNameToLoad, sdf ); ImGui::Separator();
-        //ui::ImageType( sdf.imageType ); ImGui::Separator();
         ui::SpreadResize( sdf.spread, sdf.resizeFactor ); 
 		sf::Vector2u imageSize = sdf.GetSourceSprite().getTexture()->getSize();
 		
@@ -264,9 +269,6 @@ int main(int argc, char* argv[])
 		
 		ImGui::Text(buf);
         ui::Apply( apply, autoApply ); ImGui::Separator();
-        //ui::SmoothOutlineGlow( sdf ); ImGui::Separator();
-        //ui::ViewMode( viewMode ); ImGui::Separator();
-        //ui::PaperRef(); ImGui::Separator();
 
         ImGui::End();
 
@@ -287,8 +289,15 @@ int main(int argc, char* argv[])
 		t.loadFromImage(im);
 		sf::Sprite s;
 		s.setTexture(t, true);
-        ui::SaveImage2( DATA_PATH, fileNameToSave, s );
-
+		ui::FileMenu( sdf, s, apply );
+		
+		if ((ImGui::GetIO().KeyCtrl)) { // 14 for O, 18 for S
+			if (ImGui::GetIO().KeysDown[14]) {
+				ui::LoadImage2(sdf);
+			} else if (ImGui::GetIO().KeysDown[18]) {
+				ui::SaveImage2(s);
+			}
+		}
 
         window.clear();
         ImGui::SFML::Render( window );
